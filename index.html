@@ -6,7 +6,7 @@
     <title>Muji Promotion Showcase</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Inter & Noto Sans Thai -->
+    <!-- Font Noto Sans Thai -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -25,15 +25,7 @@
             border-color: #D6CEC2;
             box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
         }
-        .muji-badge-lowest {
-            background-color: #7F2626; /* Deep Muji red accent */
-            color: #FFFFFF;
-        }
-        .muji-highlight-box {
-            background-color: #FAF8F5;
-            border-color: #7F2626;
-        }
-        /* Hide scrollbar for clean aesthetic */
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -52,12 +44,19 @@
 </head>
 <body class="min-h-screen pb-24 relative">
 
+    <!-- Floating Top-Right Refresh Button -->
+    <button id="refreshBtn" onclick="manualRefresh()" title="รีโหลดข้อมูล" class="fixed top-4 right-4 z-40 bg-white/90 backdrop-blur-md border border-stone-200 shadow-md hover:bg-stone-50 text-stone-700 hover:text-stone-900 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 group active:scale-95">
+        <svg id="refreshIcon" class="w-5 h-5 text-stone-600 group-hover:text-stone-900 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+    </button>
+
     <!-- Notification / Toast message -->
-    <div id="toast" class="fixed top-4 right-4 z-50 bg-stone-800 text-white px-4 py-2 rounded-lg text-sm shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-stone-800 text-white px-4 py-2 rounded-lg text-sm shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none">
         อัปเดตข้อมูลเรียบร้อยแล้ว
     </div>
 
-    <!-- Main Content Grid Container -->
+    <!-- Main Content Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
         
         <!-- Refreshing/Loading Overlay -->
@@ -78,7 +77,7 @@
             </button>
         </div>
 
-        <!-- Product Grid (Simple Muji Style: Only Cards) -->
+        <!-- Product Grid (Clean Muji Cards) -->
         <div id="productGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             <!-- Dynamic product cards inserted here -->
         </div>
@@ -99,7 +98,7 @@
 
     <!-- Logic Script -->
     <script>
-        // Directly set Google Apps Script Web App Endpoint URL
+        // Google Apps Script Web App Endpoint URL
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyS-QoKeqlE7afmtUJjGxgy6CIuMnhBz5YtXBvG10JtUy0CeWU4GhwkBkJqJivHoPNT/exec';
 
         // Doctors Data Config
@@ -107,269 +106,272 @@
             {
                 id: 'mew',
                 name: 'หมอหมิว',
-                keys: ['price_mew', 'mew', 'หมอหมิว', 'mew_price', 'หมิว'],
-                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473207/mew_header.png'
+                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473207/mew_header.png',
+                keys: ['price_mew', 'mew', 'ราคาหมอหมิว', 'หมอหมิว']
             },
             {
                 id: 'gun',
                 name: 'หมอกัน',
-                keys: ['price_gun', 'gun', 'หมอกัน', 'gun_price', 'กัน'],
-                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473206/gungun_header.png'
+                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473206/gungun_header.png',
+                keys: ['price_gun', 'gun', 'ราคาหมอกัน', 'หมอกัน']
             },
             {
                 id: 'nana',
                 name: 'หมอนานะ',
-                keys: ['price_nana', 'nana', 'หมอนานะ', 'nana_price', 'นานะ'],
-                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473206/nana_header.png'
+                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473206/nana_header.png',
+                keys: ['price_nana', 'nana', 'ราคาหมอนานะ', 'หมอนานะ']
             }
         ];
 
-        // Column keys for normal price & product info
-        const NORMAL_PRICE_KEYS = ['price_normal', 'normal_price', 'ราคาปกติ', 'ปกติ', 'normal'];
-        const NAME_KEYS = ['name', 'title', 'product_name', 'ชื่อ', 'รายการ', 'ชื่อสินค้า', 'สินค้า'];
-        const IMAGE_KEYS = ['image', 'img', 'picture', 'photo', 'รูป', 'รูปภาพ'];
-        const DESC_KEYS = ['description', 'desc', 'detail', 'คำบรรยาย', 'รายละเอียด'];
+        // Column Key Aliases
+        const NAME_KEYS = ['name', 'title', 'product', 'ชื่อ', 'ชื่อสินค้า', 'รายการ', 'สินค้า'];
+        const IMAGE_KEYS = ['image', 'img', 'picture', 'photo', 'รูปภาพ', 'รูป', 'ภาพประกอบ'];
+        const DESC_KEYS = ['desc', 'description', 'detail', 'รายละเอียด', 'คำบรรยาย'];
+        const NORMAL_PRICE_KEYS = ['price_normal', 'normal_price', 'normal', 'ราคาปกติ', 'ปกติ'];
 
-        window.onload = function() {
-            startClock();
-            fetchSheetData();
-            // Auto refresh data every 30 seconds
-            setInterval(fetchSheetData, 30000);
-        };
+        // Toast Notification Helper
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
 
-        // Live Clock Implementation
-        function startClock() {
-            const thaiMonths = [
-                'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+        // Real-time Clock Function
+        function updateClock() {
+            const now = new Date();
+            const daysThai = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+            const monthsThai = [
+                'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 
                 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
             ];
-            const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 
-            function updateTime() {
-                const now = new Date();
-                const dayName = thaiDays[now.getDay()];
-                const dateNum = now.getDate();
-                const monthName = thaiMonths[now.getMonth()];
-                const yearBE = now.getFullYear() + 543;
+            const dayName = daysThai[now.getDay()];
+            const dateNum = now.getDate();
+            const monthName = monthsThai[now.getMonth()];
+            const yearThai = now.getFullYear() + 543;
 
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
 
-                document.getElementById('currentDateText').innerText = `วัน${dayName}ที่ ${dateNum} ${monthName} ${yearBE}`;
-                document.getElementById('currentTimeText').innerText = `${hours}:${minutes}:${seconds}`;
-            }
-
-            updateTime();
-            setInterval(updateTime, 1000);
+            document.getElementById('currentDateText').innerText = `วัน${dayName}ที่ ${dateNum} ${monthName} ${yearThai}`;
+            document.getElementById('currentTimeText').innerText = `${hours}:${minutes}:${seconds}`;
         }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        // Fetch Data from Apps Script URL
-        async function fetchSheetData() {
-            const loadingState = document.getElementById('loadingState');
-            const errorState = document.getElementById('errorState');
-            const productGrid = document.getElementById('productGrid');
-
-            try {
-                // Fetch with follow redirects enabled for Apps Script
-                const response = await fetch(WEB_APP_URL, { redirect: 'follow' });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
-
-                const rawData = await response.json();
-
-                if (rawData.error) {
-                    throw new Error(rawData.error);
-                }
-
-                if (!Array.isArray(rawData)) {
-                    throw new Error("รูปแบบข้อมูลที่ได้รับไม่ถูกต้อง (ต้องเป็น Array)");
-                }
-
-                loadingState.classList.add('hidden');
-                errorState.classList.add('hidden');
-
-                if (rawData.length === 0) {
-                    showErrorState('ไม่พบข้อมูลรายการสินค้าใน Google Sheet');
-                    return;
-                }
-
-                renderProducts(rawData);
-                productGrid.classList.remove('hidden');
-
-            } catch (err) {
-                console.error("Fetch Error:", err);
-                loadingState.classList.add('hidden');
-                productGrid.classList.add('hidden');
-                showErrorState(`เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}`);
-            }
-        }
-
-        function showErrorState(msg) {
-            const errorState = document.getElementById('errorState');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.innerText = msg;
-            errorState.classList.remove('hidden');
-            errorState.classList.add('flex');
-        }
-
-        // Parse price safely
-        function parsePrice(val) {
-            if (val === undefined || val === null || val === '') return null;
-            if (typeof val === 'number') return val;
-            const cleaned = String(val).replace(/,/g, '').replace(/บาท/g, '').trim();
-            const parsed = parseFloat(cleaned);
-            return isNaN(parsed) ? null : parsed;
-        }
-
-        // Format Currency Display
-        function formatPrice(val) {
-            const num = parsePrice(val);
-            if (num === null) return '-';
-            return num.toLocaleString('th-TH');
-        }
-
-        // Find value matching candidate keys from object row
-        function getRowValue(row, candidateKeys) {
+        // Utility: Find value from multiple key aliases
+        function getValueByKeys(row, keys) {
             if (!row) return '';
             const rowKeys = Object.keys(row);
-            for (let key of candidateKeys) {
-                const matchedKey = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase());
-                if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
-                    return row[matchedKey];
+            for (const key of keys) {
+                const foundKey = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase());
+                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) {
+                    return row[foundKey];
                 }
             }
             return '';
         }
 
-        // Render Product Cards
-        function renderProducts(items) {
-            const productGrid = document.getElementById('productGrid');
-            productGrid.innerHTML = '';
+        // Utility: Parse price to integer/float
+        function parsePrice(val) {
+            if (val === undefined || val === null || val === '') return null;
+            if (typeof val === 'number') return val;
+            const strVal = String(val).replace(/,/g, '').replace(/[^\d.]/g, '');
+            const num = parseFloat(strVal);
+            return isNaN(num) ? null : num;
+        }
 
-            items.forEach(item => {
-                const name = getRowValue(item, NAME_KEYS) || 'รายการสินค้า';
-                const image = getRowValue(item, IMAGE_KEYS) || 'https://placehold.co/400x300/F0ECE1/7F7C74?text=No+Image';
-                const desc = getRowValue(item, DESC_KEYS);
-                const normalPriceRaw = getRowValue(item, NORMAL_PRICE_KEYS);
-                const normalPriceNum = parsePrice(normalPriceRaw);
+        // Utility: Format price with commas
+        function formatPrice(val) {
+            const num = parsePrice(val);
+            if (num === null) return '-';
+            return '฿' + num.toLocaleString('th-TH');
+        }
 
-                // Calculate doctor prices & find lowest
+        // Render Cards
+        function renderProducts(data) {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                showError('ไม่พบข้อมูลรายการโปรโมชั่นในระบบ');
+                return;
+            }
+
+            // Filter out empty rows
+            const validRows = data.filter(row => {
+                const name = getValueByKeys(row, NAME_KEYS);
+                return name && name.toString().trim() !== '';
+            });
+
+            if (validRows.length === 0) {
+                showError('ไม่พบรายการสินค้าที่ระบุชื่อใน Sheet');
+                return;
+            }
+
+            validRows.forEach((row) => {
+                const name = getValueByKeys(row, NAME_KEYS);
+                const image = getValueByKeys(row, IMAGE_KEYS);
+                const desc = getValueByKeys(row, DESC_KEYS);
+                const normalPrice = getValueByKeys(row, NORMAL_PRICE_KEYS);
+
+                // Calculate Doctor Prices & Find Lowest
                 let validPrices = [];
                 const doctorPrices = DOCTORS.map(doc => {
-                    const priceRaw = getRowValue(item, doc.keys);
-                    const priceNum = parsePrice(priceRaw);
-                    if (priceNum !== null) {
-                        validPrices.push(priceNum);
+                    const rawVal = getValueByKeys(row, doc.keys);
+                    const numVal = parsePrice(rawVal);
+                    if (numVal !== null) {
+                        validPrices.push(numVal);
                     }
                     return {
                         ...doc,
-                        raw: priceRaw,
-                        num: priceNum
+                        rawPrice: rawVal,
+                        priceNum: numVal
                     };
                 });
 
-                // Determine lowest price value
+                // Calculate minPrice (if valid prices exist)
                 const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
 
-                // Render doctor price boxes
-                const priceBoxesHTML = doctorPrices.map(doc => {
-                    const isLowest = doc.num !== null && doc.num === minPrice;
-
-                    if (isLowest) {
-                        // Highlighted Box for Lowest Price
-                        return `
-                            <div class="muji-highlight-box border-2 rounded-xl p-3 flex items-center justify-between shadow-sm relative overflow-hidden my-1">
-                                <div class="absolute -right-7 -top-7 bg-red-800 text-white text-[9px] font-bold py-4 px-8 rotate-45 uppercase tracking-wider">
-                                    ถูกที่สุด
-                                </div>
-                                <div class="flex items-center space-x-3 z-10">
-                                    <img src="${doc.avatar}" 
-                                         alt="${doc.name}" 
-                                         class="w-12 h-12 rounded-full object-cover border-2 border-red-800 shadow-sm bg-white"
-                                         onerror="this.src='https://placehold.co/100x100/E5E0D8/4A4A4A?text=Doc'">
-                                    <div>
-                                        <div class="flex items-center space-x-1.5">
-                                            <span class="font-bold text-stone-900 text-sm sm:text-base">${doc.name}</span>
-                                            <span class="bg-red-800 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">แนะนำ</span>
-                                        </div>
-                                        <span class="text-[11px] text-stone-500">ราคาดีที่สุด</span>
-                                    </div>
-                                </div>
-                                <div class="text-right z-10 pr-2">
-                                    <div class="text-lg sm:text-2xl font-black text-red-900 tracking-tight">
-                                        ฿${formatPrice(doc.num)}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        // Standard Box for Other Prices
-                        return `
-                            <div class="bg-stone-50/70 border border-stone-200/80 rounded-xl p-2.5 flex items-center justify-between">
-                                <div class="flex items-center space-x-2.5">
-                                    <img src="${doc.avatar}" 
-                                         alt="${doc.name}" 
-                                         class="w-8 h-8 rounded-full object-cover border border-stone-300 bg-white"
-                                         onerror="this.src='https://placehold.co/100x100/E5E0D8/4A4A4A?text=Doc'">
-                                    <span class="font-medium text-stone-700 text-xs sm:text-sm">${doc.name}</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="${doc.num !== null ? 'font-semibold text-stone-800 text-sm sm:text-base' : 'text-stone-400 text-xs'}">
-                                        ${doc.num !== null ? '฿' + formatPrice(doc.num) : 'ไม่ระบุราคา'}
-                                    </span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }).join('');
-
-                // Render normal price header block
-                const normalPriceHTML = normalPriceNum !== null 
-                    ? `<div class="text-right pl-2">
-                           <span class="text-[10px] text-stone-400 block -mb-1">ราคาปกติ</span>
-                           <span class="text-stone-400 line-through text-sm sm:text-base font-semibold">฿${formatPrice(normalPriceNum)}</span>
-                       </div>`
-                    : '';
-
-                // Create Product Card
+                // Create Card Element
                 const card = document.createElement('div');
-                card.className = 'muji-card rounded-2xl overflow-hidden flex flex-col justify-between';
-                card.innerHTML = `
-                    <div>
-                        <!-- Product Image -->
-                        <div class="relative w-full aspect-[4/3] bg-stone-100 overflow-hidden">
-                            <img src="${image}" 
-                                 alt="${name}" 
-                                 class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                                 onerror="this.src='https://placehold.co/400x300/F0ECE1/7F7C74?text=No+Image'">
-                        </div>
+                card.className = 'muji-card rounded-2xl p-5 flex flex-col justify-between space-y-4';
 
-                        <!-- Content Section -->
-                        <div class="p-4">
-                            <!-- Name and Normal Price Side-by-Side -->
-                            <div class="flex items-start justify-between mb-2">
-                                <h2 class="text-base sm:text-lg font-bold text-stone-900 leading-snug flex-1">
-                                    ${name}
-                                </h2>
-                                ${normalPriceHTML}
-                            </div>
-                            
-                            ${desc ? `<p class="text-xs text-stone-500 line-clamp-2 leading-relaxed mb-3">${desc}</p>` : ''}
-                        </div>
+                // Image Fallback HTML
+                const imageHtml = image ? `
+                    <div class="w-full h-48 rounded-xl overflow-hidden bg-stone-100 mb-2">
+                        <img src="${image}" alt="${name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.style.display='none';">
                     </div>
+                ` : '';
 
-                    <!-- Prices Section -->
-                    <div class="p-4 pt-0 space-y-1.5">
-                        ${priceBoxesHTML}
+                // Header: Name (xl) & Normal Price (base)
+                const headerHtml = `
+                    <div>
+                        ${imageHtml}
+                        <div class="flex items-start justify-between gap-3">
+                            <h2 class="text-xl font-bold text-stone-800 leading-snug flex-1">${name}</h2>
+                            ${normalPrice ? `
+                                <div class="text-right flex-shrink-0">
+                                    <span class="block text-xs text-stone-400 font-medium">ราคาปกติ</span>
+                                    <span class="text-base font-semibold text-stone-400 line-through">${formatPrice(normalPrice)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${desc ? `<p class="text-stone-500 text-xs mt-1.5 leading-relaxed">${desc}</p>` : ''}
                     </div>
                 `;
 
-                productGrid.appendChild(card);
+                // Doctor Price Boxes
+                let doctorBoxesHtml = '<div class="space-y-2.5 pt-1">';
+                doctorPrices.forEach(doc => {
+                    // Check if lowest price (True even if all equal)
+                    const isLowest = (minPrice !== null && doc.priceNum !== null && doc.priceNum === minPrice);
+
+                    doctorBoxesHtml += `
+                        <div class="relative flex items-center justify-between p-3 rounded-xl transition-all duration-200 border ${
+                            isLowest 
+                                ? 'bg-amber-50/60 border-amber-600/40 shadow-sm' 
+                                : 'bg-stone-50 border-stone-200/70'
+                        }">
+                            
+                            <!-- Left: Doctor Info -->
+                            <div class="flex items-center space-x-3 z-10">
+                                <div class="relative">
+                                    <img src="${doc.avatar}" alt="${doc.name}" class="w-10 h-10 rounded-full object-cover border border-stone-200 shadow-sm" onerror="this.src='https://placehold.co/100x100/EAE6DF/4A4A4A?text=Doc'">
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-semibold text-stone-800 text-sm">${doc.name}</span>
+                                    </div>
+                                    <span class="text-[11px] text-stone-400 block">${isLowest ? 'ราคาดีที่สุด' : 'ราคาโปรโมชั่น'}</span>
+                                </div>
+                            </div>
+
+                            <!-- Right: Price & Lowest Badge -->
+                            <div class="text-right flex items-center gap-2">
+                                ${isLowest ? `
+                                    <span class="bg-amber-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                        ถูกที่สุด
+                                    </span>
+                                ` : ''}
+                                <span class="text-base font-bold text-stone-800 tracking-tight">
+                                    ${formatPrice(doc.rawPrice)}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+                doctorBoxesHtml += '</div>';
+
+                card.innerHTML = headerHtml + doctorBoxesHtml;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            grid.classList.remove('hidden');
+        }
+
+        // Show Error UI
+        function showError(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('productGrid').classList.add('hidden');
+            document.getElementById('errorMessage').innerText = msg || 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('errorState').classList.add('flex');
+        }
+
+        // Fetch Data from Google Apps Script Web App
+        async function fetchSheetData() {
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderProducts(data);
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                showError('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้');
+            }
+        }
+
+        // Manual Refresh Handler
+        function manualRefresh() {
+            const icon = document.getElementById('refreshIcon');
+            const btn = document.getElementById('refreshBtn');
+            
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+
+            fetchSheetData().then(() => {
+                showToast('อัปเดตข้อมูลเรียบร้อยแล้ว');
+                setTimeout(() => {
+                    icon.classList.remove('animate-spin');
+                    btn.disabled = false;
+                }, 500);
             });
         }
+
+        // Initial Load & Auto Refresh (Every 30s)
+        window.onload = function() {
+            fetchSheetData();
+            setInterval(fetchSheetData, 30000); // 30 seconds auto-refresh
+        };
     </script>
 </body>
 </html>
