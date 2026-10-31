@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muji Promotion Showcase</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter & Noto Sans Thai -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            background-color: #F7F5F0; /* Muji warm off-white */
+            color: #4A4A4A;
+        }
+        .muji-card {
+            background-color: #FFFFFF;
+            border: 1px solid #EAE6DF;
+            transition: all 0.2s ease-in-out;
+        }
+        .muji-card:hover {
+            border-color: #D6CEC2;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
+        }
+        .muji-badge-lowest {
+            background-color: #7F2626; /* Deep Muji red accent */
+            color: #FFFFFF;
+        }
+        .muji-highlight-box {
+            background-color: #FAF8F5;
+            border-color: #7F2626;
+        }
+        /* Hide scrollbar for clean aesthetic */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F5F0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E0DCD3;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C5C0B3;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 relative">
+
+    <!-- Notification / Toast message -->
+    <div id="toast" class="fixed top-4 right-4 z-50 bg-stone-800 text-white px-4 py-2 rounded-lg text-sm shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none">
+        อัปเดตข้อมูลเรียบร้อยแล้ว
+    </div>
+
+    <!-- Main Content Grid Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+        
+        <!-- Refreshing/Loading Overlay -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-24 space-y-4">
+            <div class="w-10 h-10 border-4 border-stone-300 border-t-stone-700 rounded-full animate-spin"></div>
+            <p class="text-stone-500 font-medium text-sm tracking-wide">กำลังโหลดข้อมูลโปรโมชั่น...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden flex-col items-center justify-center py-20 px-4 text-center">
+            <div class="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <p class="text-stone-800 font-semibold text-lg mb-1" id="errorMessage">ไม่สามารถดึงข้อมูลโปรโมชั่นได้</p>
+            <p class="text-stone-500 text-sm max-w-md mb-4">โปรดตรวจสอบสัญญาณอินเทอร์เน็ต หรือสถานะของ Google Sheet</p>
+            <button onclick="fetchSheetData()" class="px-5 py-2 bg-stone-800 text-stone-100 hover:bg-stone-700 text-sm font-medium rounded-lg transition-colors">
+                ลองอีกครั้ง
+            </button>
+        </div>
+
+        <!-- Product Grid (Simple Muji Style: Only Cards) -->
+        <div id="productGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <!-- Dynamic product cards inserted here -->
+        </div>
+
+    </main>
+
+    <!-- Floating Live Date & Time Bar -->
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+        <div class="bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-lg px-5 py-2.5 rounded-full flex items-center gap-3 text-stone-700">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="currentDateText" class="text-xs sm:text-sm font-medium tracking-wide">กำลังดึงวันที่...</span>
+            </div>
+            <span class="text-stone-300">|</span>
+            <span id="currentTimeText" class="text-xs sm:text-sm font-bold font-mono tracking-wider text-stone-900">00:00:00</span>
+        </div>
+    </div>
+
+    <!-- Logic Script -->
+    <script>
+        // Directly set Google Apps Script Web App Endpoint URL
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyS-QoKeqlE7afmtUJjGxgy6CIuMnhBz5YtXBvG10JtUy0CeWU4GhwkBkJqJivHoPNT/exec';
+
+        // Doctors Data Config
+        const DOCTORS = [
+            {
+                id: 'mew',
+                name: 'หมอหมิว',
+                keys: ['price_mew', 'mew', 'หมอหมิว', 'mew_price', 'หมิว'],
+                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473207/mew_header.png'
+            },
+            {
+                id: 'gun',
+                name: 'หมอกัน',
+                keys: ['price_gun', 'gun', 'หมอกัน', 'gun_price', 'กัน'],
+                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473206/gungun_header.png'
+            },
+            {
+                id: 'nana',
+                name: 'หมอนานะ',
+                keys: ['price_nana', 'nana', 'หมอนานะ', 'nana_price', 'นานะ'],
+                avatar: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1793473206/nana_header.png'
+            }
+        ];
+
+        // Column keys for normal price & product info
+        const NORMAL_PRICE_KEYS = ['price_normal', 'normal_price', 'ราคาปกติ', 'ปกติ', 'normal'];
+        const NAME_KEYS = ['name', 'title', 'product_name', 'ชื่อ', 'รายการ', 'ชื่อสินค้า', 'สินค้า'];
+        const IMAGE_KEYS = ['image', 'img', 'picture', 'photo', 'รูป', 'รูปภาพ'];
+        const DESC_KEYS = ['description', 'desc', 'detail', 'คำบรรยาย', 'รายละเอียด'];
+
+        window.onload = function() {
+            startClock();
+            fetchSheetData();
+            // Auto refresh data every 30 seconds
+            setInterval(fetchSheetData, 30000);
+        };
+
+        // Live Clock Implementation
+        function startClock() {
+            const thaiMonths = [
+                'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+            ];
+            const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+
+            function updateTime() {
+                const now = new Date();
+                const dayName = thaiDays[now.getDay()];
+                const dateNum = now.getDate();
+                const monthName = thaiMonths[now.getMonth()];
+                const yearBE = now.getFullYear() + 543;
+
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+
+                document.getElementById('currentDateText').innerText = `วัน${dayName}ที่ ${dateNum} ${monthName} ${yearBE}`;
+                document.getElementById('currentTimeText').innerText = `${hours}:${minutes}:${seconds}`;
+            }
+
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        // Fetch Data from Apps Script URL
+        async function fetchSheetData() {
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const productGrid = document.getElementById('productGrid');
+
+            try {
+                // Fetch with follow redirects enabled for Apps Script
+                const response = await fetch(WEB_APP_URL, { redirect: 'follow' });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const rawData = await response.json();
+
+                if (rawData.error) {
+                    throw new Error(rawData.error);
+                }
+
+                if (!Array.isArray(rawData)) {
+                    throw new Error("รูปแบบข้อมูลที่ได้รับไม่ถูกต้อง (ต้องเป็น Array)");
+                }
+
+                loadingState.classList.add('hidden');
+                errorState.classList.add('hidden');
+
+                if (rawData.length === 0) {
+                    showErrorState('ไม่พบข้อมูลรายการสินค้าใน Google Sheet');
+                    return;
+                }
+
+                renderProducts(rawData);
+                productGrid.classList.remove('hidden');
+
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                loadingState.classList.add('hidden');
+                productGrid.classList.add('hidden');
+                showErrorState(`เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}`);
+            }
+        }
+
+        function showErrorState(msg) {
+            const errorState = document.getElementById('errorState');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.innerText = msg;
+            errorState.classList.remove('hidden');
+            errorState.classList.add('flex');
+        }
+
+        // Parse price safely
+        function parsePrice(val) {
+            if (val === undefined || val === null || val === '') return null;
+            if (typeof val === 'number') return val;
+            const cleaned = String(val).replace(/,/g, '').replace(/บาท/g, '').trim();
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? null : parsed;
+        }
+
+        // Format Currency Display
+        function formatPrice(val) {
+            const num = parsePrice(val);
+            if (num === null) return '-';
+            return num.toLocaleString('th-TH');
+        }
+
+        // Find value matching candidate keys from object row
+        function getRowValue(row, candidateKeys) {
+            if (!row) return '';
+            const rowKeys = Object.keys(row);
+            for (let key of candidateKeys) {
+                const matchedKey = rowKeys.find(k => k.trim().toLowerCase() === key.toLowerCase());
+                if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
+                    return row[matchedKey];
+                }
+            }
+            return '';
+        }
+
+        // Render Product Cards
+        function renderProducts(items) {
+            const productGrid = document.getElementById('productGrid');
+            productGrid.innerHTML = '';
+
+            items.forEach(item => {
+                const name = getRowValue(item, NAME_KEYS) || 'รายการสินค้า';
+                const image = getRowValue(item, IMAGE_KEYS) || 'https://placehold.co/400x300/F0ECE1/7F7C74?text=No+Image';
+                const desc = getRowValue(item, DESC_KEYS);
+                const normalPriceRaw = getRowValue(item, NORMAL_PRICE_KEYS);
+                const normalPriceNum = parsePrice(normalPriceRaw);
+
+                // Calculate doctor prices & find lowest
+                let validPrices = [];
+                const doctorPrices = DOCTORS.map(doc => {
+                    const priceRaw = getRowValue(item, doc.keys);
+                    const priceNum = parsePrice(priceRaw);
+                    if (priceNum !== null) {
+                        validPrices.push(priceNum);
+                    }
+                    return {
+                        ...doc,
+                        raw: priceRaw,
+                        num: priceNum
+                    };
+                });
+
+                // Determine lowest price value
+                const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
+
+                // Render doctor price boxes
+                const priceBoxesHTML = doctorPrices.map(doc => {
+                    const isLowest = doc.num !== null && doc.num === minPrice;
+
+                    if (isLowest) {
+                        // Highlighted Box for Lowest Price
+                        return `
+                            <div class="muji-highlight-box border-2 rounded-xl p-3 flex items-center justify-between shadow-sm relative overflow-hidden my-1">
+                                <div class="absolute -right-7 -top-7 bg-red-800 text-white text-[9px] font-bold py-4 px-8 rotate-45 uppercase tracking-wider">
+                                    ถูกที่สุด
+                                </div>
+                                <div class="flex items-center space-x-3 z-10">
+                                    <img src="${doc.avatar}" 
+                                         alt="${doc.name}" 
+                                         class="w-12 h-12 rounded-full object-cover border-2 border-red-800 shadow-sm bg-white"
+                                         onerror="this.src='https://placehold.co/100x100/E5E0D8/4A4A4A?text=Doc'">
+                                    <div>
+                                        <div class="flex items-center space-x-1.5">
+                                            <span class="font-bold text-stone-900 text-sm sm:text-base">${doc.name}</span>
+                                            <span class="bg-red-800 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">แนะนำ</span>
+                                        </div>
+                                        <span class="text-[11px] text-stone-500">ราคาดีที่สุด</span>
+                                    </div>
+                                </div>
+                                <div class="text-right z-10 pr-2">
+                                    <div class="text-lg sm:text-2xl font-black text-red-900 tracking-tight">
+                                        ฿${formatPrice(doc.num)}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Standard Box for Other Prices
+                        return `
+                            <div class="bg-stone-50/70 border border-stone-200/80 rounded-xl p-2.5 flex items-center justify-between">
+                                <div class="flex items-center space-x-2.5">
+                                    <img src="${doc.avatar}" 
+                                         alt="${doc.name}" 
+                                         class="w-8 h-8 rounded-full object-cover border border-stone-300 bg-white"
+                                         onerror="this.src='https://placehold.co/100x100/E5E0D8/4A4A4A?text=Doc'">
+                                    <span class="font-medium text-stone-700 text-xs sm:text-sm">${doc.name}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="${doc.num !== null ? 'font-semibold text-stone-800 text-sm sm:text-base' : 'text-stone-400 text-xs'}">
+                                        ${doc.num !== null ? '฿' + formatPrice(doc.num) : 'ไม่ระบุราคา'}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+
+                // Render normal price header block
+                const normalPriceHTML = normalPriceNum !== null 
+                    ? `<div class="text-right pl-2">
+                           <span class="text-[10px] text-stone-400 block -mb-1">ราคาปกติ</span>
+                           <span class="text-stone-400 line-through text-sm sm:text-base font-semibold">฿${formatPrice(normalPriceNum)}</span>
+                       </div>`
+                    : '';
+
+                // Create Product Card
+                const card = document.createElement('div');
+                card.className = 'muji-card rounded-2xl overflow-hidden flex flex-col justify-between';
+                card.innerHTML = `
+                    <div>
+                        <!-- Product Image -->
+                        <div class="relative w-full aspect-[4/3] bg-stone-100 overflow-hidden">
+                            <img src="${image}" 
+                                 alt="${name}" 
+                                 class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                                 onerror="this.src='https://placehold.co/400x300/F0ECE1/7F7C74?text=No+Image'">
+                        </div>
+
+                        <!-- Content Section -->
+                        <div class="p-4">
+                            <!-- Name and Normal Price Side-by-Side -->
+                            <div class="flex items-start justify-between mb-2">
+                                <h2 class="text-base sm:text-lg font-bold text-stone-900 leading-snug flex-1">
+                                    ${name}
+                                </h2>
+                                ${normalPriceHTML}
+                            </div>
+                            
+                            ${desc ? `<p class="text-xs text-stone-500 line-clamp-2 leading-relaxed mb-3">${desc}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Prices Section -->
+                    <div class="p-4 pt-0 space-y-1.5">
+                        ${priceBoxesHTML}
+                    </div>
+                `;
+
+                productGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
